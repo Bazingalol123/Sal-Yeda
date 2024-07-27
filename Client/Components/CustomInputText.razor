@@ -1,0 +1,54 @@
+﻿@inherits Microsoft.AspNetCore.Components.Forms.InputText
+
+<input @attributes="@AdditionalAttributes" class="@CssClass" default-input="@inputClass"
+@bind="@CurrentValueAsString" @bind:event="oninput" @onkeyup="countChars"
+       maxlength="@maxLength" minlength="@minLength" />
+<span style="position: relative; left: 50px; width: 30px; bottom:30px">@length.ToString()/@maxLength.ToString()</span>
+
+@code {
+    [Parameter]
+    public int minLength { get; set; } = 2;
+
+    [Parameter]
+    public int midLength { get; set; } = 7;
+
+    [Parameter]
+    public int maxLength { get; set; } = 30;
+
+    private string inputClass = "";
+    private int length = 0;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        countChars();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        countChars();
+    }
+
+    private void countChars()
+    {
+        length = CurrentValueAsString?.Length ?? 0;
+        updateInputClass();
+    }
+
+    private void updateInputClass()
+    {
+        if (length >= minLength && length < midLength)
+        {
+            inputClass = "good-input";
+        }
+        else if (length >= midLength && length <= maxLength)
+        {
+            inputClass = "warning-input";
+        }
+        else
+        {
+            inputClass = "danger-input";
+        }
+    }
+}

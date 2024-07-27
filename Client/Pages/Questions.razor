@@ -1,0 +1,1594 @@
+﻿@page "/QuestionsToEdit/{id:int}"
+@using template.Shared.Models.Classes
+@inject HttpClient Http
+@using template.Client.Components
+@inject NavigationManager Nav
+
+
+
+
+<link href="css/GameListDesign.css" rel="stylesheet" />
+<ButtonComponent ButtonColor="#36697C" ButtonText="למשחקים שלי"
+                 Width="180px" type="button" top="110px" right="1280px" Position="fixed" OnClick="SwitchToSaveModal" direction="ltr" display="flex" justifyContent="center" alignItems="center"><img src="images/reply.svg" /></ButtonComponent>
+<div id="sign" style="display: flex;">
+    <div class="image-container">
+        <img src="images/board-png-8.png" class="headerBoard" />
+        <div class="text-overlay">
+            <p>עריכת שאלות</p>
+        </div>
+        <div id="gameNameInQuestions">
+            <p>@gameToEdit.GameName</p>
+            <p>|</p>
+            @if (gameToEdit.questionTime == int.MaxValue)
+            {
+                <p>אין הגבלת זמן</p>
+            }
+            else
+            {
+                <p>@gameToEdit.questionTime.ToString() שניות לשאלה</p>
+            }
+
+            <button class="tableButtons" @onclick="ShowModal2">
+                <i class="bi bi-gear-wide"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+<PopUpComponent IsVisible="showModal2" OnClose="HideModal2">
+    <div style="bottom:30px;">
+        <p class="newGameHeader">הגדרות משחק</p>
+        <EditForm Model="gameToEdit" OnValidSubmit="HideModal2" id="EditGameForm">
+            <DataAnnotationsValidator />
+            <p style="font-size:24px;">שם המשחק</p>
+            <CustomInputText class="textInForm" @bind-Value="gameToEdit.GameName" placeholder=" שם המשחק" style="position: relative; bottom: 15px;" />
+            <div style="height:20px;">
+                <ValidationMessage For="@(() => gameToEdit.GameName)" style="font-size:17px;" />
+            </div>
+            <div>
+                <p style="font-size:24px;">זמן לשאלה</p>
+                <InputRadioGroup @bind-Value="gameToEdit.questionTime" class="radio-group">
+                    <div style="display:inline-block">
+                        <InputRadio Value="20" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "20" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="30" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "30" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="60" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "60" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="90" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "90" } })" />
+                    </div>
+                    <div style="display:inline-block;">
+                        <InputRadio Value="@int.MaxValue" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "ללא הגבלת זמן" } })" id="lastButton" />
+                    </div>
+                </InputRadioGroup>
+                <ValidationMessage For="@(() => gameToEdit.questionTime)" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; width:60em; position: relative; top:25px; left: 12em;">
+                <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" Width="140px" OnClick="HideModal2" />
+                @if (MyGamesList != null)
+                {
+                    var originalGame = MyGamesList.FirstOrDefault(g => g.ID == gameToEdit.ID);
+                    if (originalGame != null)
+                    {
+                        if (gameToEdit.GameName == originalGame.GameName && gameToEdit.questionTime == originalGame.questionTime)
+                        {
+                            <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="#EEC383" TextColor="black" Disabled="true" Width="140px" />
+                        }
+                        else
+                        {
+                            <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="orange" TextColor="black" OnClick="EditGame" Width="140px" />
+                        }
+                    }
+                }
+            </div>
+        </EditForm>
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="showModalDeleteQuestion" OnClose="ShowHideModalDeleteQuestion">
+    <p class="newGameHeader">מחיקת שאלה</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px;height:10px;">לחיצה על כפתור מחיקה תמחק את השאלה <b>"@questionsEdit.content" </b>לצמיתות.</p>
+    <p style="color: white; font-size: 18px;  position:relative; right:150px;height:10px;">האם ברצונך למחוק את השאלה?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="ShowHideModalDeleteQuestion" />
+        <ButtonComponent ButtonText="מחיקת שאלה" ButtonColor="orange" TextColor="black" OnClick="DeleteQuestion" Width="140px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="showModalDeleteAnswer" OnClose="ShowHideModalDeleteAnswer">
+    <p class="newGameHeader">מחיקת תשובה</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">לחיצה על כפתור מחיקה תמחק את התשובה לצמיתות.</p>
+    <p style="color: white; font-size: 18px;  position:relative; right:150px; height:10px;">האם ברצונך למחוק את התשובה?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="ShowHideModalDeleteAnswer" />
+        <ButtonComponent ButtonText="מחיקת תשובה" ButtonColor="orange" TextColor="black" OnClick="DeleteConfirmedAnswer" Width="150px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="swtichToText" OnClose="SwitchToTextModal">
+    <p class="newGameHeader">שינוי תמונה לטקסט</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">שינוי תמונה לטקסט יגרום למחיקת התמונה הקיימת</p>
+    <p style="color: white; font-size: 18px;  position:relative; right:150px; height:10px;">ברצונך להחליף בכל זאת?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="CancelSwitchToText" />
+        <ButtonComponent ButtonText="החלף" ButtonColor="orange" TextColor="black" OnClick="ConfirmSwitchToText" Width="150px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="swtichToImage" OnClose="SwitchToImageModal">
+    <p class="newGameHeader">שינוי טקסט לתמונה</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">שינוי טקסט לתמונה יגרום למחיקת הטקסט הקיים</p>
+    <p style="color: white; font-size: 18px;  position:relative; right:150px; height:10px;">ברצונך להחליף בכל זאת?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="SwitchToImageModal" />
+        <ButtonComponent ButtonText="החלף" ButtonColor="orange" TextColor="black" OnClick="ConfirmSwithToImage" Width="150px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="saveIfChanges" OnClose="SwitchToSaveModal">
+    <p class="newGameHeader">חזרה למשחקים שלי</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">בלחיצה על המשך השינויים שביצעת לא יישמרו.</p>
+    <p style="color: white; font-size: 18px;  position:relative; right:150px; height:10px;">האם ברצונך לעבור למשחקים שלי?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="SwitchToSaveModal" />
+        <ButtonComponent ButtonText="המשך" ButtonColor="orange" TextColor="black" OnClick="GoBackToGames" Width="150px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="showSaveChangesModal" OnClose="HideSaveChangesModal">
+    <p class="newGameHeader">שינוי שאלה</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">בלחיצה על המשך השינויים שביצעת לא יישמרו.</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">האם ברצונך להמשיך?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="HideSaveChangesModal" />
+        <ButtonComponent ButtonText="המשך" ButtonColor="orange" TextColor="black" OnClick="ConfirmLoadAnswers" Width="150px" />
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="showSaveChangesModalForRemove" OnClose="HideSaveChangesModalForRemove">
+    <p class="newGameHeader">איפוס שדות</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">איפוס שדות יגרום למחיקת כל התוכן שהוזן עד כה בשאלה ובמסיחים.</p>
+    <p style="color: white; font-size: 18px; position:relative; right:150px; height:10px;">האם ברצונך להמשיך?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:500px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="HideSaveChangesModalForRemove" />
+        <ButtonComponent ButtonText="איפוס שדות" ButtonColor="orange" TextColor="black" OnClick="ConfirmRemoveSelection" Width="150px" />
+    </div>
+</PopUpComponent>
+
+
+
+
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (questions.Count < 0)
+{
+    @*<p class="text-danger">@errorMessage</p>*@
+}
+else
+{
+    <div id="queAnsDiv">
+        <div id="questionsList">
+            <div style="position: relative; z-index: 1; bottom:32px;left: 31px;background-color:#739477; height:30px; width:35em; border-radius:10px 10px 0px 0px; padding: 1px;">
+                <p style="position: relative; right: 20px;color:white;font-size:18px; bottom:10px;">רשימת שאלות</p>
+                <p style="position: relative; right: 140px;bottom:45px;color:white;font-size:12px; ">(@questions.Count/@maxQuestions)</p>
+                <div class="question-condition">
+                    @if (questions.Count == 10)
+                    {
+                        <img src="images/checkgreen.svg" alt="icon" style="position:relative; left:5px;" />
+                    }
+                    else
+                    {
+                        <img src="images/cancelred.svg" alt="icon" style="position:relative; left:5px;" />
+                    }
+
+                    <p style="color:white;font-size:14px;">לפחות @minQuestions שאלות</p>
+                </div>
+            </div>
+            <div id="questionsSheet">
+                @if (questions.Count <= 0)
+                {
+                    <div class="question-marks-container">
+                        <img src="images/questionMarks-8.png" id="question-marks">
+                        <p>עדיין לא נוצרו שאלות...</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var question in questions)
+                    {
+                        <div id="questions">
+                            <div id="eachQuestion" @onclick="() => LoadAnswers(question.id)" class="@(selectedQuestionId == question.id ? "active" : "not-active")">
+                                @if (selectedQuestionId == question.id)
+                                {
+                                    <button @onclick="@(e => ShowHideModalDeleteQuestion())" class="delete-icon">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                }
+                                <div class="question-content">
+                                    <img src="images/ball.png" alt="icon" class="question-icon" />
+                                    @question.content
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+         @if (questions.Count == 30 && !isQuestionSelected )
+{
+    
+    <div id="maximum-question-screen">
+        <div id="basket-container">
+            <img src="images/basket-for-site.png" />
+            <p style="width:100px; height:200px; text-align:center; position:relative;bottom:310px; left:120px;">
+                נוצרו 30 שאלות לא ניתן ליצור עוד שאלות!
+                אפשר לערוך או למחוק שאלות קיימות מהרשימה.
+            </p>
+        </div>
+    </div>
+}
+else{
+
+        
+            <div id="answersContainer">
+                <div id="answersList">
+                    <EditForm EditContext="_editContext" OnValidSubmit="SaveChanges" OnInvalidSubmit="HandleInvalidSubmit" style="height:420px; position:relative; bottom:15px;">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary style="font-size:14px; position:fixed; top:580px; left: 100px;" />
+                        <ToolTip Text="בשאלה ניתן להזין טקסט (בין 2-60 תווים) ולצרף תמונה" right="52px" bottom="-35px" width="190px">
+                            <img src="images/tooltip.svg" style="height:18px; width: 18px;" />
+                        </ToolTip>
+
+                        <p style="font-size: 18px;">שאלה:</p>
+                        <div style="display:flex; position: relative; width:600px; align-items:center; bottom:20px;">
+                            <label></label>
+                            <CustomInputText id="questionText" @bind-Value="questionsEdit.content" maxLength="60" midLength="15" minLength="2" @oninput="MarkChangedStatus" />
+                            @*<ValidationMessage For="@(() => questionsEdit.content)" style="font-size:14px; position:fixed; top:620px; left: 100px;" />*@
+                            <div class="questionImage">
+                                @if (string.IsNullOrEmpty(questionsEdit.imageContentWithoutText))
+                                {
+                                    <label for="fileInput" class="custom-file-upload"></label>
+                                    <InputFile id="fileInput" OnChange="UploadFile" style="display:none;" />
+                                }
+                                else
+                                {
+                                    <img src="@questionsEdit.imageContentWithoutText" alt="Question Image" />
+                                    <button class="tableButtons" @onclick="DeleteImage"><i class="bi bi-trash-fill" /></button>
+                                }
+                            </div>
+                        </div>
+                        <ToolTip Text="שאלה יכולה להכיל 2-6 מסיחים, בתוכם טקסט (עד 40 תווים) או תמונה" right="60px" bottom="20px" width="190px"> <img src="images/tooltip.svg" style="height:18px; width: 18px;" /></ToolTip>
+                        <p style="font-size: 18px; display: inline; position:relative; bottom:40px;">תשובות</p>
+                        <div id="answerInputContainer">
+                            @foreach (var answer in questionsEdit.AnswerList)
+                            {
+                                <div class="mb-3">
+                                    @if (questionsEdit.AnswerList.Count > 2)
+                                    {
+                                        <button type="button" class="tableButtons" style="position: relative; bottom:70px;width:20px;" @onclick="() => ConfirmDeleteAnswer(answer)">
+                                            <i class="bi bi-trash-fill" />
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @*<div style="width:20px; height:20px; position: relative; bottom:70px;"></div>*@
+                                    }
+
+                                    @if (answer.IsImageAnswer == false)
+                                    {
+
+
+                                        <CustomInputTextArea class="answers" @bind-Value="answer.textContent" @onchange="MarkChangedStatus" MaxLength="40"></CustomInputTextArea>
+
+
+                                    }
+                                    else
+                                    {
+
+                                        @if (string.IsNullOrEmpty(answer.imageContentWithoutText))
+                                        {
+                                            <label for="@GenerateAnswerFileInputId(answer)" class="answersImageExist" id="answer-image-upload"></label>
+                                            <InputFile id="@GenerateAnswerFileInputId(answer)" OnChange="async e => await UploadFileForAnswer(e, answer)" style=" display:none;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="answersImageExist">
+                                                <img src="@answer.imageContentWithoutText" alt="Answer Image" />
+
+                                            </div>
+                                        }
+
+                                    }
+
+                                    <div class="label-is-correct">
+                                        <InputCheckbox @bind-Value="answer.IsCorrect" @onchange="() => { UpdateCheckboxState(answer); MarkChangedStatus(); }" disabled="@IsCheckboxDisabled(answer)" />
+                                        <label></label>
+                                    </div>
+
+                                    <div class="toggle-container">
+                                        <span>תמונה</span>
+                                        <label class="switch">
+                                            <input type="checkbox" id="toggleAddType" @onchange="e => { ToggleAddType(e, answer); MarkChangedStatus(); }" checked="@answer.IsImageAnswer" />
+                                            <span class="slider round"></span>
+                                        </label>
+                                        <span>טקסט</span>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (questionsEdit.AnswerList.Count < 6)
+                            {
+                                <div>
+                                    <button class="answers" id="textAreaLookAlike" type="button" @onclick="() => { AddTemporaryAnswer(); MarkChangedStatus(); }"></button>
+                                </div>
+                            }
+                        </div>
+
+
+                        @if (isNewQuestion && !isQuestionSelected &&
+                       (string.IsNullOrWhiteSpace(questionsEdit.content) ||
+                       questionsEdit.AnswerList.Any(a => string.IsNullOrWhiteSpace(a.textContent) || string.IsNullOrEmpty(a.imageContentWithoutText)) &&
+                       !questionsEdit.AnswerList.Any(a => a.IsCorrect)))
+                        {
+                            @if (questions.Count == 0)
+                            {
+                                <div class="sticky-but-newque">
+                                    <div class="tooltip-button-wrapper">
+                                        <ToolTip Text="איפוס שדות יאפס את כל התוכן שהוזן בשאלה ובתשובות" bottom="0px" width="120px">
+                                            <ButtonComponent ButtonText="ניקוי שדות" ButtonColor="#F6F6F3" TextColor="black" left="120px" Height="40px" Width="120px" OnClick="RemoveSelection" Disabled="true" type="button" />
+                                        </ToolTip>
+                                    </div>
+                                    <div class="tooltip-button-wrapper">
+                                        <ToolTip Text="לאחר שמירת השאלה המסך יתאפס ליצירת שאלה חדשה" bottom="0px" width="140px">
+                                            <ButtonComponent ButtonText="שמירת שאלה" ButtonColor="#EEC383" TextColor="black" Width="140px" Disabled="true" MarginRight="30px" />
+                                        </ToolTip>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="sticky-but-newque">
+                                    <ButtonComponent ButtonText="איפוס שדות" ButtonColor="#F6F6F3" TextColor="black" left="120px" Height="40px" Width="140px" OnClick="RemoveSelection" type="button" Disabled="true" />
+                                    <ButtonComponent ButtonText="שמירת שאלה" ButtonColor="#EEC383" TextColor="black" Width="140px" Disabled="true" />
+                                </div>
+                            }
+                        }
+
+                        else if (isNewQuestion && !isQuestionSelected && questions.Count < maxQuestions)
+                        {
+                            <div class="sticky-but-newque">
+                                <ButtonComponent ButtonText="איפוס שדות" ButtonColor="white" TextColor="black" Width="140px" left="120px" Height="40px" OnClick="RemoveSelection" type="button" />
+                                <ButtonComponent ButtonText="שמירת שאלה" ButtonColor="orange" TextColor="black" Width="140px" type="submit" />
+                            </div>
+                        }
+                        else if (hasChanges && !isNewQuestion)
+                        {
+                            <div class="sticky-buttons">
+                                <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" left="70px" Height="40px" OnClick="ResetFields" />
+                                <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="orange" TextColor="black" Position="relative" left="70px" Height="40px" Width="140px" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="sticky-buttons">
+                                <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" left="120px" Height="40px" OnClick="ResetFields" />
+                                <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="#EEC383" TextColor="black" Width="140px" left="80px" Disabled="true" />
+                            </div>
+                        }
+
+
+
+                    </EditForm>
+                </div>
+                
+            </div>
+        }
+
+
+
+
+    </div>
+}
+
+
+
+@code {
+    [Parameter]
+    public int id { get; set; }
+
+    private EditContext _editContext;
+    private string initialQuestionContent;
+    private List<AnswerToShow> initialAnswerList;
+
+    bool showModal = false;
+    bool showModal2 = false;
+
+    private List<QuestionToShow> questions = new List<QuestionToShow>();
+    private List<QuestionToShow> questionToAdd = new List<QuestionToShow>();
+    private List<AnswerToShow> answers = new List<AnswerToShow>();
+    private bool isLoading = true;
+    private string errorMessage;
+    private string errorImg;
+
+
+    private long maxFileSize = 4194304;
+    private int? selectedQuestionId =    null;
+    int minQuestions = 10;
+    int maxQuestions = 30;
+    private int pendingQuestionId = -1;
+
+    private QuestionToEdit questionsEdit = new QuestionToEdit();
+    private QuestionToShow questionsAdd = new QuestionToShow();
+    private AnswerToShow answerToEdit = new AnswerToShow();
+
+    private GamesTable gameToEdit = new GamesTable();
+    List<GamesTable> MyGamesList;
+    private List<string> tempImagePaths = new List<string>();
+
+    private bool isPhotoChanged = false;
+    private bool isNewQuestion = true;
+    private bool hasChanges = false;
+    private bool isQuestionSelected;
+    private bool showModalDeleteQuestion = false;
+    private bool showModalDeleteAnswer = false;
+    private bool swtichToText = false;
+    private bool originalIsImageAnswer = false;
+    private bool swtichToImage = false;
+    private bool saveIfChanges = false;
+    private bool showSaveChangesModal = false;
+    private bool showSaveChangesModalForRemove = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isQuestionSelected = false;
+        questionsAdd.id = id;
+        await LoadGamesList();
+        await LoadQuestions();
+        InitializeAnswers();
+        GetGameData();
+        hasChanges = false;
+        initialQuestionContent = questionsEdit.content;
+        initialAnswerList = CloneAnswersList(questionsEdit.AnswerList);
+        _editContext = new EditContext(questionsEdit);
+    }
+
+
+    private List<AnswerToShow> CloneAnswersList(List<AnswerToShow> originalList)
+    {
+        return originalList.Select(a => new AnswerToShow
+            {
+                id = a.id,
+                questionId = a.questionId,
+                textContent = a.textContent,
+                imageContentWithoutText = a.imageContentWithoutText,
+                IsCorrect = a.IsCorrect,
+                IsImageAnswer = a.IsImageAnswer
+            }).ToList();
+    }
+
+    private bool HasChanges()
+    {
+        bool isQuestionContentChanged = !string.Equals(initialQuestionContent, questionsEdit.content, StringComparison.Ordinal);
+        bool areAnswersChanged = !AreAnswersEqual(initialAnswerList, questionsEdit.AnswerList);
+        return isQuestionContentChanged || areAnswersChanged;
+    }
+
+    private bool AreAnswersEqual(List<AnswerToShow> initialAnswers, List<AnswerToShow> currentAnswers)
+    {
+        if (initialAnswers.Count != currentAnswers.Count)
+            return false;
+
+        for (int i = 0; i < initialAnswers.Count; i++)
+        {
+            if (!string.Equals(initialAnswers[i].textContent, currentAnswers[i].textContent, StringComparison.Ordinal) ||
+                initialAnswers[i].IsCorrect != currentAnswers[i].IsCorrect ||
+                initialAnswers[i].IsImageAnswer != currentAnswers[i].IsImageAnswer ||
+                !string.Equals(initialAnswers[i].imageContentWithoutText, currentAnswers[i].imageContentWithoutText, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void MarkChangedStatus()
+    {
+        hasChanges = HasChanges();
+        StateHasChanged();
+    }
+
+
+    private void InitializeAnswers()
+    {
+        if (questionsEdit.AnswerList == null || !questionsEdit.AnswerList.Any())
+        {
+            questionsEdit.AnswerList = new List<AnswerToShow>
+            {
+                new AnswerToShow
+                {
+                    questionId = questionsEdit.id,
+                    textContent = "",
+                    IsCorrect = false,
+                    IsImageAnswer = false
+
+                },
+                new AnswerToShow
+                {
+                    questionId = questionsEdit.id,
+                    textContent = "",
+                    IsCorrect = false,
+                    IsImageAnswer = false
+                }
+            };
+        }
+    }
+
+    private async Task LoadGamesList()
+    {
+        try
+        {
+            MyGamesList = await Http.GetFromJsonAsync<List<GamesTable>>("api/games"); // Update the URL to match your API endpoint
+            if (MyGamesList == null)
+            {
+                Console.WriteLine("Failed to load games list.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading games list: {ex.Message}");
+        }
+    }
+
+    private string GenerateAnswerFileInputId(AnswerToShow answer)
+    {
+        return $"fileInput_{answer.id}";
+    }
+
+    private void GetGameData()
+    {
+        if (MyGamesList == null)
+        {
+            Console.WriteLine("MyGamesList is null.");
+            return;
+        }
+
+        var game = MyGamesList.FirstOrDefault(g => g.ID == id);
+        if (game != null)
+        {
+            gameToEdit = new GamesTable
+                {
+                    ID = game.ID,
+                    GameName = game.GameName,
+                    questionTime = game.questionTime
+                };
+
+            // After assigning the values, print the gameToEdit values
+            Console.WriteLine($"ID: {gameToEdit.ID}, GameName: {gameToEdit.GameName}, questionTime: {gameToEdit.questionTime}");
+        }
+        else
+        {
+            Console.WriteLine($"Game with ID {id} not found.");
+        }
+    }
+
+    private async Task LoadQuestions()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await Http.GetFromJsonAsync<List<QuestionToShow>>($"api/questions/{id}");
+            if (response != null)
+            {
+                questions = response;
+                Console.WriteLine($"questions number is: {questions.Count}");
+
+                foreach (var questio in questions)
+                {
+                    Console.WriteLine($"question image is:{questionsEdit.imageContentWithoutText}");
+                }
+            }
+            else
+            {
+                errorMessage = "No questions found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading questions: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadAnswers(int questionId)
+    {
+        if (hasChanges)
+        {
+            showSaveChangesModal = true;
+            pendingQuestionId = questionId;
+            StateHasChanged();
+            return;
+        }
+
+        await LoadAnswersInternal(questionId);
+            isQuestionSelected = true; 
+    }
+
+    private async Task LoadAnswersInternal(int questionId)
+    {
+        selectedQuestionId = questionId;
+        isQuestionSelected = true;
+
+        var selectedQuestion = questions.FirstOrDefault(q => q.id == questionId);
+        if (selectedQuestion != null)
+        {
+            // Fetch answers from the server to ensure the latest data, including images, is retrieved
+            var response = await Http.GetFromJsonAsync<List<AnswerToShow>>($"api/questions/answers/{questionId}");
+
+            if (response != null && response.Any())
+            {
+                questionsEdit = new QuestionToEdit
+                    {
+                        id = selectedQuestion.id,
+                        content = selectedQuestion.content,
+                        imageContentWithoutText = selectedQuestion.image,
+                        AnswerList = response.Select(answer => new AnswerToShow
+                        {
+                            id = answer.id,
+                            questionId = answer.questionId,
+                            textContent = answer.textContent,
+                            imageContentWithoutText = answer.imageContentWithoutText,
+                            IsCorrect = answer.IsCorrect,
+                            IsImageAnswer = !string.IsNullOrEmpty(answer.imageContentWithoutText) // Set IsImageAnswer based on image content
+                        }).ToList()
+                    };
+            }
+
+            isNewQuestion = false;
+            MarkAsUnchanged();
+        }
+        else
+        {
+            questionsEdit = new QuestionToEdit(); // Clear the form if no question is selected
+        }
+
+        // Update the EditContext
+        _editContext = new EditContext(questionsEdit);
+    }
+    private void HideSaveChangesModal()
+    {
+        showSaveChangesModal = false;
+        pendingQuestionId = -1;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmLoadAnswers()
+    {
+        showSaveChangesModal = false;
+        if (pendingQuestionId != -1)
+        {
+            await LoadAnswersInternal(pendingQuestionId);
+            pendingQuestionId = -1;
+        }
+        StateHasChanged();
+    }
+
+    //private async Task LoadAnswers(int questionId)
+    //{
+    //    selectedQuestionId = questionId;
+    //    isQuestionSelected = true;
+
+    //    var selectedQuestion = questions.FirstOrDefault(q => q.id == questionId);
+    //    if (selectedQuestion != null)
+    //    {
+    //        // Fetch answers from the server to ensure the latest data, including images, is retrieved
+    //        var response = await Http.GetFromJsonAsync<List<AnswerToShow>>($"api/questions/answers/{questionId}");
+
+    //        if (response != null && response.Any())
+    //        {
+    //            questionsEdit = new QuestionToEdit
+    //                {
+    //                    id = selectedQuestion.id,
+    //                    content = selectedQuestion.content,
+    //                    imageContentWithoutText = selectedQuestion.image,
+    //                    AnswerList = response.Select(answer => new AnswerToShow
+    //                    {
+    //                        id = answer.id,
+    //                        questionId = answer.questionId,
+    //                        textContent = answer.textContent,
+    //                        imageContentWithoutText = answer.imageContentWithoutText,
+    //                        IsCorrect = answer.IsCorrect,
+    //                        IsImageAnswer = !string.IsNullOrEmpty(answer.imageContentWithoutText) // Set IsImageAnswer based on image content
+    //                    }).ToList()
+    //                };
+    //        }
+
+    //        isNewQuestion = false;
+    //        MarkAsUnchanged();
+    //    }
+    //    else
+    //    {
+    //        questionsEdit = new QuestionToEdit(); // Clear the form if no question is selected
+    //    }
+
+    //    // Update the EditContext
+    //    _editContext = new EditContext(questionsEdit);
+    //}
+
+    private void AddTemporaryAnswer()
+    {
+        hasChanges = true;
+        questionsEdit.AnswerList.Add(new AnswerToShow
+            {
+                questionId = questionsEdit.id,
+                textContent = "",
+                IsCorrect = false,
+                imageContentWithoutText = null,
+                IsImageAnswer = false
+            });
+
+        _editContext = new EditContext(questionsEdit); // Update the EditContext
+    }
+
+    private async Task EditGame()
+    {
+        var response = await Http.PutAsJsonAsync($"api/games/settings/{gameToEdit.ID}", gameToEdit);
+        if (response.IsSuccessStatusCode)
+        {
+            var updatedGame = MyGamesList.FirstOrDefault(g => g.ID == gameToEdit.ID);
+            if (updatedGame != null)
+            {
+                updatedGame.GameName = gameToEdit.GameName;
+                updatedGame.questionTime = gameToEdit.questionTime;
+            }
+            HideModal2();
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            ShowError(error);
+        }
+    }
+
+    private bool ValidateQuestion(QuestionToEdit question)
+    {
+        foreach (var answer in question.AnswerList)
+        {
+            if ((string.IsNullOrWhiteSpace(answer.textContent) || answer.textContent.Length < 2) && string.IsNullOrWhiteSpace(answer.imageContentWithoutText))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private async Task CreateQuestion()
+    {
+        if (ValidateQuestion(questionsEdit))
+        {
+            try
+            {
+                // Collect image paths
+                if (!string.IsNullOrEmpty(questionsEdit.imageContentWithoutText))
+                {
+                    tempImagePaths.Add(Path.GetFileName(questionsEdit.imageContentWithoutText));
+                    Console.WriteLine($"tempImagePaths count: {tempImagePaths.Count}");
+                }
+
+                foreach (var answer in questionsEdit.AnswerList)
+                {
+                    if (!string.IsNullOrEmpty(answer.imageContentWithoutText))
+                    {
+                        tempImagePaths.Add(Path.GetFileName(answer.imageContentWithoutText));
+                        Console.WriteLine($"tempImagePaths count: {tempImagePaths.Count}");
+                    }
+                }
+
+                // Move images to permanent folder
+                if (tempImagePaths.Count > 0)
+                {
+                    Console.WriteLine("Moving items..");
+                    var moveResponse = await Http.PostAsJsonAsync("api/Media/moveFiles", tempImagePaths);
+                    if (!moveResponse.IsSuccessStatusCode)
+                    {
+                        var error = await moveResponse.Content.ReadAsStringAsync();
+                        ShowError(error);
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Moved successfully.");
+
+                        // Update the image paths in the questionsEdit object
+                        if (!string.IsNullOrEmpty(questionsEdit.imageContentWithoutText))
+                        {
+                            questionsEdit.imageContentWithoutText = $"uploadedFiles/{Path.GetFileName(questionsEdit.imageContentWithoutText)}";
+                        }
+
+                        foreach (var answer in questionsEdit.AnswerList)
+                        {
+                            if (!string.IsNullOrEmpty(answer.imageContentWithoutText))
+                            {
+                                answer.imageContentWithoutText = $"uploadedFiles/{Path.GetFileName(answer.imageContentWithoutText)}";
+                            }
+                        }
+
+                        tempImagePaths.Clear();
+                    }
+                }
+
+                // Create new question
+                questionsEdit.GameId = id;
+                var newQuestionRes = await Http.PostAsJsonAsync("api/questions/newQuestion", questionsEdit);
+                if (newQuestionRes.IsSuccessStatusCode)
+                {
+                    QuestionToShow newQuestion = await newQuestionRes.Content.ReadFromJsonAsync<QuestionToShow>();
+                    if (newQuestion != null)
+                    {
+                        questions.Add(newQuestion);
+                        questionsEdit = new QuestionToEdit(); // Clear the form after successful addition
+                        isNewQuestion = true;
+                        StateHasChanged();
+                        answerToEdit.IsImageAnswer = false;
+                        isQuestionSelected = false;
+                        StateHasChanged();
+                        await CheckIfGameCanBePublished();
+                        MarkChangedStatus();
+                        StateHasChanged();
+                        ResetFields();
+                    }
+                    else
+                    {
+                        string error = await newQuestionRes.Content.ReadAsStringAsync();
+                        ShowError(error);
+                    }
+                }
+                else
+                {
+                    var error = await newQuestionRes.Content.ReadAsStringAsync();
+                    ShowError(error);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex.Message);
+            }
+        }
+        else
+        {
+            ShowError("Validation failed. Please ensure all answers have either at least 2 characters of text or an image.");
+        }
+    }
+
+
+    private void MoveImageFiles(string sourcePath, string destPath)
+    {
+        try
+        {
+            if (File.Exists(sourcePath))
+            {
+                string destDirectory = Path.GetDirectoryName(destPath);
+                if (!Directory.Exists(destDirectory))
+                {
+                    Directory.CreateDirectory(destDirectory);
+                }
+                File.Move(sourcePath, destPath);
+                Console.WriteLine($"Image moved from {sourcePath} to {destPath}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Exception occurred while moving the image file: {ex.Message}");
+        }
+    }
+
+
+
+    private async Task CheckIfGameCanBePublished()
+    {
+        var game = new GamesTable
+            {
+                ID = gameToEdit.ID,
+                CanPublish = gameToEdit.CanPublish,
+                isPublished = gameToEdit.isPublished
+            };
+
+        var response = await Http.PostAsJsonAsync($"api/games/checkPublish/{gameToEdit.ID}", game);
+        if (response.IsSuccessStatusCode)
+        {
+            var message = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(message); // Or update UI to reflect the new publishable state
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            ShowError(error);
+        }
+    }
+
+
+
+    private async Task SaveChanges()
+    {
+        if (isNewQuestion)
+        {
+            await CreateQuestion();
+        }
+        else
+        {
+            // Collect image paths
+            if (!string.IsNullOrEmpty(questionsEdit.imageContentWithoutText) && questionsEdit.imageContentWithoutText.Contains("uploadTemp"))
+            {
+                tempImagePaths.Add(Path.GetFileName(questionsEdit.imageContentWithoutText));
+            }
+
+            foreach (var answer in questionsEdit.AnswerList)
+            {
+                if (!string.IsNullOrEmpty(answer.imageContentWithoutText) && answer.imageContentWithoutText.Contains("uploadTemp"))
+                {
+                    tempImagePaths.Add(Path.GetFileName(answer.imageContentWithoutText));
+                }
+            }
+
+            // Move images to permanent folder before saving changes
+            if (tempImagePaths.Count > 0)
+            {
+                Console.WriteLine("Moving items..");
+                var moveResponse = await Http.PostAsJsonAsync("api/Media/moveFiles", tempImagePaths);
+                if (!moveResponse.IsSuccessStatusCode)
+                {
+                    var error = await moveResponse.Content.ReadAsStringAsync();
+                    ShowError(error);
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("Moved successfully.");
+
+                    // Update the image paths in the questionsEdit object
+                    if (!string.IsNullOrEmpty(questionsEdit.imageContentWithoutText) && questionsEdit.imageContentWithoutText.Contains("uploadTemp"))
+                    {
+                        questionsEdit.imageContentWithoutText = $"uploadedFiles/{Path.GetFileName(questionsEdit.imageContentWithoutText)}";
+                        var updateQuestionImageResponse = await Http.PostAsJsonAsync($"api/questions/updateImagesQuestion/{questionsEdit.id}", questionsEdit.imageContentWithoutText);
+                        if (!updateQuestionImageResponse.IsSuccessStatusCode)
+                        {
+                            var error = await updateQuestionImageResponse.Content.ReadAsStringAsync();
+                            ShowError(error);
+                            return;
+                        }
+                    }
+
+                    foreach (var answer in questionsEdit.AnswerList)
+                    {
+                        if (!string.IsNullOrEmpty(answer.imageContentWithoutText) && answer.imageContentWithoutText.Contains("uploadTemp"))
+                        {
+                            answer.imageContentWithoutText = $"uploadedFiles/{Path.GetFileName(answer.imageContentWithoutText)}";
+                            var updateAnswerImageResponse = await Http.PostAsJsonAsync($"api/questions/updateImageAnswer/{answer.id}", answer.imageContentWithoutText);
+                            if (!updateAnswerImageResponse.IsSuccessStatusCode)
+                            {
+                                var error = await updateAnswerImageResponse.Content.ReadAsStringAsync();
+                                ShowError(error);
+                                return;
+                            }
+                        }
+                    }
+
+                    tempImagePaths.Clear();
+                }
+            }
+
+            var response = await Http.PutAsJsonAsync($"api/questions/edit-questions/{questionsEdit.id}", questionsEdit);
+            if (response.IsSuccessStatusCode)
+            {
+                var updatedQuestion = questions.FirstOrDefault(q => q.id == questionsEdit.id);
+                if (updatedQuestion != null)
+                {
+                    updatedQuestion.content = questionsEdit.content;
+                    updatedQuestion.image = questionsEdit.imageContentWithoutText;
+                    updatedQuestion.AnswerList = questionsEdit.AnswerList;
+                    MarkAsUnchanged();
+                    await CheckIfGameCanBePublished();
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                string error = await response.Content.ReadAsStringAsync();
+                ShowError(error);
+            }
+        }
+    }
+
+
+
+
+
+    private void HandleInvalidSubmit()
+    {
+        _editContext.Validate();
+        StateHasChanged();
+    }
+    private void ConfirmDeleteAnswer(AnswerToShow answer)
+    {
+        answerToEdit = answer;
+        ShowHideModalDeleteAnswer();
+    }
+
+    private void DeleteConfirmedAnswer()
+    {
+        DeleteAnswer(answerToEdit);
+        ShowHideModalDeleteAnswer();
+    }
+
+    private void DeleteAnswer(AnswerToShow answerToDelete)
+    {
+        if (answerToDelete.id == 0)
+        {
+            questionsEdit.AnswerList.Remove(answerToDelete);
+            StateHasChanged();
+        }
+        else
+        {
+            _ = DeleteAnswerFromServer(answerToDelete);
+            MarkChangedStatus();
+        }
+    }
+
+    private async Task DeleteAnswerFromServer(AnswerToShow answerToDelete)
+    {
+        if (questionsEdit.AnswerList.Count > 2)
+        {
+            var response = await Http.DeleteAsync($"api/questions/answers/{answerToDelete.id}");
+            if (response.IsSuccessStatusCode)
+            {
+                questionsEdit.AnswerList.Remove(answerToDelete);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task DeleteQuestion()
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/questions/{questionsEdit.id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var questionToDelete = questions.FirstOrDefault(q => q.id == questionsEdit.id);
+                if (questionToDelete != null)
+                {
+                    questions.Remove(questionToDelete);
+                }
+                questionsEdit = new QuestionToEdit();
+                InitializeAnswers();
+                isNewQuestion = true;
+                selectedQuestionId = null;
+                isQuestionSelected = false;
+                await CheckIfGameCanBePublished();
+                StateHasChanged();
+                ShowHideModalDeleteQuestion(); // Hide the delete modal after deletion
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                ShowError(error);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex.Message);
+        }
+    }
+
+    private async Task DeleteImage()
+    {
+        if (questionsEdit == null || string.IsNullOrEmpty(questionsEdit.imageContentWithoutText))
+        {
+            errorImg = "No image to delete.";
+            return;
+        }
+
+        var deleteResponse = await Http.PostAsJsonAsync("api/Media/deleteImages", new List<string> { questionsEdit.imageContentWithoutText });
+        if (deleteResponse.IsSuccessStatusCode)
+        {
+            questionsEdit.imageContentWithoutText = "";
+            var updateResponse = await Http.PostAsJsonAsync($"api/questions/updateImagesQuestion/{questionsEdit.id}", questionsEdit.imageContentWithoutText);
+
+            if (updateResponse.IsSuccessStatusCode)
+            {
+                errorImg = "Photo has been successfully deleted.";
+                StateHasChanged();
+            }
+            else
+            {
+                var errorMessage = await updateResponse.Content.ReadAsStringAsync();
+                errorImg = $"Failed to update the class image information: {errorMessage}";
+            }
+        }
+        else
+        {
+            var errorMessage = await deleteResponse.Content.ReadAsStringAsync();
+            errorImg = $"Failed to delete the image: {errorMessage}";
+        }
+    }
+
+    private async Task UploadFile(InputFileChangeEventArgs e)
+    {
+        var imageFiles = e.GetMultipleFiles();
+        foreach (var file in imageFiles)
+        {
+            if (file.Size <= maxFileSize)
+            {
+                var buffer = new byte[file.Size];
+                await file.OpenReadStream(maxFileSize).ReadAsync(buffer);
+                var imageBase64 = Convert.ToBase64String(buffer);
+
+                var saveResponse = await Http.PostAsJsonAsync("api/Media/uploadTemp", imageBase64);
+                if (saveResponse.IsSuccessStatusCode)
+                {
+                    string resizeUrl = await saveResponse.Content.ReadAsStringAsync();
+                    questionsEdit.imageContentWithoutText = "uploadTemp/" + resizeUrl;
+
+
+                    var saveResponse2 = await Http.PostAsJsonAsync($"api/questions/updateImagesQuestion/{questionsEdit.id}", questionsEdit.imageContentWithoutText);
+                    if (saveResponse2.IsSuccessStatusCode)
+                    {
+                        errorImg = "The upload was successful.";
+
+                        isPhotoChanged = true;
+                        hasChanges = true;
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        var errorMessage = await saveResponse2.Content.ReadAsStringAsync();
+                        errorImg = $"Image update failed: {errorMessage}";
+                    }
+                }
+                else
+                {
+                    var errorMessage = await saveResponse.Content.ReadAsStringAsync();
+                    errorImg = $"Image upload failed: {errorMessage}";
+                }
+            }
+            else
+            {
+                errorImg = "File size exceeds the maximum limit.";
+            }
+        }
+    }
+
+
+
+    private async Task UploadFileForAnswer(InputFileChangeEventArgs e, AnswerToShow answer)
+    {
+        var imageFiles = e.GetMultipleFiles();
+        foreach (var file in imageFiles)
+        {
+            if (file.Size <= maxFileSize)
+            {
+                var buffer = new byte[file.Size];
+                await file.OpenReadStream(maxFileSize).ReadAsync(buffer);
+                var imageBase64 = Convert.ToBase64String(buffer);
+
+                var saveResponse = await Http.PostAsJsonAsync("api/Media/uploadTemp", imageBase64);
+                if (saveResponse.IsSuccessStatusCode)
+                {
+                    string resizeUrl = await saveResponse.Content.ReadAsStringAsync();
+                    answer.imageContentWithoutText = "uploadTemp/" + resizeUrl;
+
+
+
+                    var saveResponse2 = await Http.PostAsJsonAsync($"api/questions/updateImagesAnswer/{answer.id}", answer.imageContentWithoutText);
+                    if (saveResponse2.IsSuccessStatusCode)
+                    {
+                        errorImg = "The upload was successful.";
+
+                        isPhotoChanged = true;
+                        MarkChangedStatus();
+                        StateHasChanged();
+                    }
+                    else
+                    {
+                        var errorMessage = await saveResponse2.Content.ReadAsStringAsync();
+                        errorImg = $"Image update failed: {errorMessage}";
+                    }
+                }
+                else
+                {
+                    var errorMessage = await saveResponse.Content.ReadAsStringAsync();
+                    errorImg = $"Image upload failed: {errorMessage}";
+                }
+            }
+            else
+            {
+                errorImg = "File size exceeds the maximum limit.";
+            }
+        }
+    }
+
+    private void ShowError(string error)
+    {
+        switch (error)
+        {
+            case "Question ID mismatch.":
+                errorMessage = "אופס! לא נמצאה שאלה כזו";
+                break;
+            case "user is not authenticated":
+                errorMessage = "ארעה בעיה בעת אימות המשתמש";
+                break;
+            case "Question content and answers cannot be null.":
+                errorMessage = "חובה למלא את השאלות והמסיחים";
+                break;
+            case "Game code not created":
+                errorMessage = "ארעה בעיה בעת יצירת קוד המשחק";
+                break;
+            case "It's Not Your Game":
+                errorMessage = "המשחק הזה אינו שלך...";
+                break;
+            case "This game cannot be published":
+                errorMessage = "המשחק אינו מאושר לפרסום";
+                break;
+            case "Update Failed":
+                errorMessage = "בעיה בעדכון המשחק";
+                break;
+        }
+    }
+
+    private void UpdateCheckboxState(AnswerToShow changedAnswer)
+    {
+        if (changedAnswer.IsCorrect)
+        {
+            foreach (var answer in questionsEdit.AnswerList)
+            {
+                if (answer != changedAnswer)
+                {
+                    answer.IsCorrect = false;
+                }
+            }
+        }
+        MarkChangedStatus();
+        StateHasChanged();
+    }
+
+    private bool IsCheckboxDisabled(AnswerToShow answer)
+    {
+        return !answer.IsCorrect && questionsEdit.AnswerList.Any(a => a.IsCorrect);
+    }
+
+    private void MarkAsChanged()
+    {
+        hasChanges = true;
+        StateHasChanged();
+    }
+
+    private void MarkAsUnchanged()
+    {
+        hasChanges = false;
+        StateHasChanged();
+    }
+
+    private void ShowModal2()
+    {
+        showModal2 = true;
+    }
+
+    private void HideModal2()
+    {
+        showModal2 = false;
+    }
+
+    private async Task DeleteImageReferenceFromDb(int answerId)
+    {
+        var response = await Http.PostAsJsonAsync($"api/questions/deleteImageReference/{answerId}", new { ImagePath = answerToEdit.imageContentWithoutText });
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Image reference deleted from database successfully.");
+        }
+        else
+        {
+            var errorMessage = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Failed to delete image reference from database: {errorMessage}");
+        }
+    }
+
+    private async Task DeletePhotoFromWwwRoot(string imagePath)
+    {
+        var response = await Http.PostAsJsonAsync("api/Media/deleteImages", new List<string> { imagePath });
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorMessage = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Failed to delete the image: {errorMessage}");
+        }
+        else
+        {
+            Console.WriteLine("Image deleted successfully.");
+        }
+    }
+
+    //private async Task RemoveSelection()
+    //{
+    //    Console.WriteLine("RemoveSelection called.");
+    //    Console.WriteLine($"tempImagePaths count: {tempImagePaths.Count}");
+
+    //    foreach (var tempImagePath in tempImagePaths)
+    //    {
+    //        Console.WriteLine($"Deleting {tempImagePath}");
+    //        await DeletePhotoFromWwwRoot(tempImagePath);
+    //    }
+
+    //    // Clear the temporary list after deletion
+    //    tempImagePaths.Clear();
+
+    //    // Reset questionsEdit
+    //    selectedQuestionId = null;
+    //    isQuestionSelected = false;
+    //    isNewQuestion = true;
+    //    questionsEdit = new QuestionToEdit();
+    //    hasChanges = false;
+
+    //    questionsEdit.AnswerList = new List<AnswerToShow>
+    //{
+    //    new AnswerToShow
+    //    {
+    //        questionId = questionsEdit.id,
+    //        textContent = "",
+    //        IsCorrect = false,
+    //        IsImageAnswer = false
+    //    },
+    //    new AnswerToShow
+    //    {
+    //        questionId = questionsEdit.id,
+    //        textContent = "",
+    //        IsCorrect = false,
+    //        IsImageAnswer = false
+    //    }
+    //};
+
+    //    StateHasChanged();
+    //}
+    private void RemoveSelection()
+    {
+        if (hasChanges)
+        {
+            showSaveChangesModalForRemove = true;
+            StateHasChanged();
+            return;
+        }
+
+        PerformRemoveSelection();
+    }
+
+    private void PerformRemoveSelection()
+    {
+        Console.WriteLine("RemoveSelection called.");
+        Console.WriteLine($"tempImagePaths count: {tempImagePaths.Count}");
+
+        foreach (var tempImagePath in tempImagePaths)
+        {
+            Console.WriteLine($"Deleting {tempImagePath}");
+            DeletePhotoFromWwwRoot(tempImagePath).Wait();
+        }
+
+        // Clear the temporary list after deletion
+        tempImagePaths.Clear();
+
+        // Reset questionsEdit
+        selectedQuestionId = null;
+        isQuestionSelected = false;
+        isNewQuestion = true;
+        questionsEdit = new QuestionToEdit();
+        hasChanges = false;
+
+        questionsEdit.AnswerList = new List<AnswerToShow>
+    {
+        new AnswerToShow
+        {
+            questionId = questionsEdit.id,
+            textContent = "",
+            IsCorrect = false,
+            IsImageAnswer = false
+        },
+        new AnswerToShow
+        {
+            questionId = questionsEdit.id,
+            textContent = "",
+            IsCorrect = false,
+            IsImageAnswer = false
+        }
+    };
+
+        StateHasChanged();
+    }
+
+    private void HideSaveChangesModalForRemove()
+    {
+        showSaveChangesModalForRemove = false;
+        StateHasChanged();
+    }
+
+    private void ConfirmRemoveSelection()
+    {
+        showSaveChangesModalForRemove = false;
+        PerformRemoveSelection();
+        StateHasChanged();
+    }
+
+
+
+    private void ShowHideModalDeleteQuestion()
+    {
+        showModalDeleteQuestion = !showModalDeleteQuestion;
+    }
+    private void ShowHideModalDeleteAnswer()
+    {
+        showModalDeleteAnswer = !showModalDeleteAnswer;
+    }
+
+    private void SwitchToTextModal()
+    {
+        swtichToText = !swtichToText;
+    }
+
+    private void SwitchToImageModal()
+    {
+        swtichToImage = !swtichToImage;
+        answerToEdit.IsImageAnswer = true;
+        StateHasChanged();
+    }
+    private void SwitchToSaveModal()
+    {
+        if (hasChanges == true)
+        {
+            saveIfChanges = !saveIfChanges;
+            StateHasChanged();
+        }
+        else
+        {
+            GoBackToGames();
+        }
+
+    }
+    private void ConfirmSwithToImage()
+    {
+        answerToEdit.textContent = string.Empty;
+        answerToEdit.IsImageAnswer = true;
+        MarkChangedStatus();
+        StateHasChanged();
+        SwitchToImageModal();
+
+    }
+    private async Task ConfirmSwitchToText()
+    {
+        if (!string.IsNullOrEmpty(answerToEdit.imageContentWithoutText))
+        {
+            // Delete image from server
+            await DeletePhotoFromWwwRoot(answerToEdit.imageContentWithoutText);
+
+            // Delete image reference from database
+            await DeleteImageReferenceFromDb(answerToEdit.id);
+
+            // Remove image from answer
+            answerToEdit.imageContentWithoutText = string.Empty;
+            answerToEdit.IsImageAnswer = false;
+
+            // Notify state change
+            MarkChangedStatus();
+            StateHasChanged();
+        }
+
+        // Close modal
+        SwitchToTextModal();
+    }
+
+
+    private void CancelSwitchToText()
+    {
+        answerToEdit.IsImageAnswer = true;
+        Console.WriteLine("Initiated CancelSwtichToText =" + answerToEdit.IsImageAnswer);
+        SwitchToTextModal();
+        StateHasChanged();
+    }
+    private void CancelSwitchToImage()
+    {
+        answerToEdit.IsImageAnswer = false;
+        Console.WriteLine("Initiated CancelSwtichToText =" + answerToEdit.IsImageAnswer);
+        SwitchToImageModal();
+        StateHasChanged();
+    }
+
+
+
+
+    private void ToggleAddType(ChangeEventArgs e, AnswerToShow answer)
+    {
+        bool newValue = (bool)e.Value;
+        Console.WriteLine($"ToggleAddType invoked. New value: {newValue}, Current IsImageAnswer: {answer.IsImageAnswer}");
+
+        // Only proceed if there is a change in the toggle value
+        if (newValue != answer.IsImageAnswer)
+        {
+            answerToEdit = answer;
+            originalIsImageAnswer = answer.IsImageAnswer;
+            Console.WriteLine("Toggling state. isImageAnswer was: " + answer.IsImageAnswer);
+
+            if (!newValue)
+            {
+                // Check if there is an existing photo
+                if (!string.IsNullOrEmpty(answer.imageContentWithoutText))
+                {
+                    // Show confirmation modal if there is an existing photo
+                    Console.WriteLine("Existing photo detected. Showing confirmation modal to switch to text.");
+                    SwitchToTextModal();
+                }
+                else
+                {
+                    // Directly switch to text if there is no existing photo
+                    Console.WriteLine("No existing photo. Switching directly to text.");
+                    answer.IsImageAnswer = false;
+                    MarkChangedStatus();
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                // Switching from text to image
+                if (!string.IsNullOrEmpty(answer.textContent))
+                {
+                    Console.WriteLine("Text content exists. Showing confirmation modal to switch to image.");
+                    SwitchToImageModal();
+                    MarkChangedStatus();
+                    StateHasChanged(); // Ensure UI updates
+                }
+                else
+                {
+                    Console.WriteLine("No text content. Directly switching to image.");
+                    answer.IsImageAnswer = true;
+                    MarkChangedStatus();
+                    StateHasChanged();
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine("No change in toggle value. No action taken.");
+        }
+    }
+
+
+
+
+
+    void ResetFields()
+    {
+        questionsEdit = new QuestionToEdit();
+        isQuestionSelected = false;
+        selectedQuestionId = null;
+        hasChanges = false;
+        isNewQuestion = true;
+        tempImagePaths.Clear();
+        InitializeAnswers();
+        StateHasChanged();
+
+    }
+
+    void GoBackToGames()
+    {
+
+
+        Nav.NavigateTo("/GamesList");
+
+    }
+
+
+}

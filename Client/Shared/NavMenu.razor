@@ -1,0 +1,114 @@
+﻿@using template.Client.Components;
+
+<nav>
+    <div>
+        <NavLink href="" Match="NavLinkMatch.All">
+            משחק
+        </NavLink>
+    </div>
+    <div>
+        <NavLink href="GamesList">
+            עורך
+        </NavLink>
+    </div>
+    <div>
+        <NavLink style="cursor:pointer;" @onclick="ShowHowToPlayPopUp">
+            איך משחקים
+        </NavLink>
+    </div>
+    <div>
+        <NavLink style="cursor:pointer;" @onclick="ShowAboutPopup">
+            אודות
+        </NavLink>
+    </div>
+
+</nav>
+
+<PopUpComponent IsVisible="showAboutPopup" OnClose="ShowAboutPopup">
+    <div id="about-pop-up">
+        <div id="headerText">
+            <img src="images/logo.png" />
+            <p style="color:white;font-size:30px;">אודות</p>
+            <p>
+                עומר קריספי, רז לוי וסתיו מרק
+            </p>
+            <p>פותח במסגרת פרויקט בקורסים:</p>
+            <p>סביבות אינטראקטיביות 2, תכנות 2, תכנות אנימציה ואינטראקציה 2, תשפ"ה</p>
+        </div>
+        <div id="about-pop-up-footer">
+            <img src="images/hit-logo.png" style="height:50px;width:auto;" />
+            <a href="https://www.hit.ac.il/academic/instructional-technologies/">הפקולטה לטכנולוגיות למידה</a>
+            <p style="margin-bottom:0px;margin-top:0px;font-size:12px;">מכון טכנולוגי חולון</p>
+        </div>
+
+
+    </div> 
+</PopUpComponent>
+
+
+<PopUpComponent IsVisible="showHowToPlayPopUp" OnClose="ShowHowToPlayPopUp">
+    <div id="about-pop-up">
+        <div id="headerText">
+            <img src="images/logo.png" />
+            <p style="color:white;font-size:30px;">איך משחקים?</p>
+           <p>כאן יופיע סרטון...</p>
+        </div>
+        
+    </div>
+</PopUpComponent>
+
+
+<style>
+    #about-pop-up {
+        flex-direction: column;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        right: 50%;
+        bottom: 20px;
+        transform: translateX(50%);
+    } #about-pop-up-footer{       display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        top: 25px;
+    }
+   
+    #headerText {
+        position: relative;
+        bottom: 10px;
+        flex-direction: column;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        #headerText img {
+            position: relative;
+            top: 30px;
+        }
+
+    #headerText p {
+        color: white;
+        font-size: 14px;
+        margin-top: 30px;
+        margin-bottom: -10px;
+    }
+</style>
+@code {
+
+    private bool showAboutPopup = false;
+    private bool showHowToPlayPopUp = false;
+
+    private void ShowAboutPopup()
+    {
+        showAboutPopup = !showAboutPopup;
+    }
+
+    private void ShowHowToPlayPopUp()
+    {
+        showHowToPlayPopUp = !showHowToPlayPopUp;
+    }
+}

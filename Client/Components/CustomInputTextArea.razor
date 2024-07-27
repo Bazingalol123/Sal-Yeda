@@ -1,0 +1,67 @@
+﻿@inherits Microsoft.AspNetCore.Components.Forms.InputTextArea
+
+<textarea @attributes="@AdditionalAttributes" class="answers @inputClass"
+          value="@CurrentValue" @oninput="OnInput" @onkeyup="countChars"
+          maxlength="@MaxLength" minlength="@MinLength"></textarea>
+
+<span class="char-count">@length.ToString()/@MaxLength.ToString()</span>
+
+@code {
+    [Parameter] public int MaxLength { get; set; } = 40;
+    [Parameter] public int MinLength { get; set; } = 2;
+    private int length;
+    private string inputClass = "";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        InitializeLength();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        InitializeLength();
+    }
+
+    private void InitializeLength()
+    {
+        length = CurrentValue?.Length ?? 0;
+        inputClass = GetCssClass();
+    }
+
+    protected override bool TryParseValueFromString(string? value, out string result, out string? validationErrorMessage)
+    {
+        result = value ?? string.Empty;
+        validationErrorMessage = null;
+        return true;
+    }
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        CurrentValue = e.Value?.ToString();
+        countChars();
+    }
+
+    private void countChars()
+    {
+        length = CurrentValue?.Length ?? 0;
+        inputClass = GetCssClass();
+    }
+
+    private string GetCssClass()
+    {
+        if (length >= MinLength && length < MaxLength)
+        {
+            return "good-input";
+        }
+        else if (length >= MaxLength)
+        {
+            return "danger-input";
+        }
+        else
+        {
+            return "warning-input";
+        }
+    }
+}

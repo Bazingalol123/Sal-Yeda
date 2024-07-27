@@ -1,0 +1,65 @@
+﻿<button type="@type" class="custom-button" style="background-color:@ButtonColor; color:@TextColor; font-size:@FontSize; margin-left:@MarginLeft; margin-right:@MarginRight; border-radius:15px; font-family:'Varela Round';position:@Position; top:@top; right: @right; left: @left; bottom: @bottom; height:@Height; width:@Width; z-index:auto; direction:@direction;display: @display; justify-content: @justifyContent; align-items: @alignItems;" @onclick="HandleClick" disabled="@Disabled">
+    @ButtonText @ChildContent
+</button>
+
+@code {
+    [Parameter]
+    public string ButtonText { get; set; } = "Button";
+
+    [Parameter]
+    public string ButtonColor { get; set; } = "orange";
+
+    [Parameter]
+    public string TextColor { get; set; } = "white";
+
+    [Parameter]
+    public string FontSize { get; set; } = "16px";
+
+    [Parameter]
+    public string MarginLeft { get; set; } = "10px";
+
+    [Parameter]
+    public string MarginRight { get; set; } = "10px";
+
+    [Parameter]
+    public string Position { get; set; } = "relative"; 
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    [Parameter]
+    public string type { get; set; }
+    [Parameter]
+    public string top { get; set; } = "0x";
+    [Parameter]
+    public string right { get; set; } = "0px";
+    [Parameter]
+    public string left { get; set; }= "0px";
+    [Parameter]
+    public string bottom { get; set; } = "0px";
+    [Parameter]
+    public string Width { get; set; } = "80px";
+    [Parameter]
+    public string Height { get; set; } = "40px"; 
+
+    [Parameter]
+    public string direction { get; set; } = "rtl";
+    [Parameter]
+    public string display { get; set; } 
+    [Parameter]
+    public string justifyContent { get; set; }
+    [Parameter]
+    public string alignItems { get; set; } 
+
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    private async Task HandleClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync(null);
+        }
+    }
+}

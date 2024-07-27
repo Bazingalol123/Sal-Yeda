@@ -1,0 +1,468 @@
+﻿@page "/GamesList"
+@using template.Shared.Models.Classes;
+@inject HttpClient Http;
+@inject NavigationManager Nav;
+@using template.Client.Components;
+
+<link href="css/GameListDesign.css" rel="stylesheet" />
+<div id="sign">
+    <div class="image-container">
+        <img src="images/board-png-8.png" class="headerBoard" />
+        <div class="text-overlay">
+            <p>לוח המשחקים</p>
+        </div>
+    </div>
+</div>
+
+
+
+@if(MyGamesList == null)
+{
+    <div class="no-games-container">
+                <button class="orangeButtonNoGames" style="order:3"  @onclick="ShowModal"><i class="bi bi-plus-circle-fill"></i>&nbsp;יצירת משחק חדש</button>
+
+        <img src="images/ball.png"/>
+        <h3>עדיין לא נוצרו משחקים...</h3>
+</div>
+}else
+{
+
+    <ToolTip Text="כדי לפרסם משחק נדרשות לפחות 10 שאלות" right="1210px" bottom="0px" width="150px">
+        <img src="images/tooltip.svg" style="height:18px; width: 18px;" />
+    </ToolTip>
+
+    <div>
+    <button class="orangeButton" id="newGameButton" @onclick="ShowModal"><i class="bi bi-plus-circle-fill"></i>&nbsp;יצירת משחק חדש</button>
+</div>
+   
+    <div class="table-container">
+      
+        <table id="GamesTable">
+            <thead>
+                <tr style="font-size:16px; height:40px;">
+                    <th><b>שם המשחק</b></th>
+                    <th><b>קוד המשחק</b></th>
+                    <th><b>הגדרות</b></th>
+                    <th><b>עריכה</b></th>
+                    <th><b>מחיקה</b></th>
+                    <th><b>פרסום</b>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (GamesTable game in MyGamesList)
+                {
+                    <tr>
+                        <td style="text-align:right; width: 200px;">@game.GameName</td>
+                        <td>@game.GameCode</td>
+                        <td>
+                            <button class="tableButtons" @onclick="() => OpenSettings(game.ID)">
+                                <i class="bi bi-gear-wide"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <button class="tableButtons" @onclick="() => EditQuestions(game.ID)">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                        </td>
+                        <td>
+                            <button class="tableButtons" @onclick="() => ToggleDeleteModal(game)">
+                                <i class="bi bi-trash2-fill"></i>
+                            </button>
+                        </td>
+
+                        <td>
+                            @if (game.CanPublish == false)
+                            {
+
+                                <input type="checkbox" disabled />
+
+                            }
+                            else
+                            {
+                                <input type="checkbox" checked="@game.isPublished" @onclick=@(() => changePublish(game)) />
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+
+
+
+<PopUpComponent IsVisible="showModal" OnClose="HideModal">
+    <p class="newGameHeader">יצירת משחק חדש</p>
+    <EditForm Model="gameToAdd" OnValidSubmit="HideModal" id="addGameForm">
+        <DataAnnotationsValidator />
+       <div style="position:relative; bottom: 30px;">
+
+        <p style="font-size:24px;">שם המשחק</p>
+       @* <InputText class="textInForm" style="position: relative; bottom: 15px;" @bind-Value="gameToAdd.GameName" maxlength="30" />*@
+        <CustomInputText class="textInForm" @bind-Value="gameToAdd.GameName" maxLength="30"
+                         midLength="15" minLength="2" placeholder=" שם המשחק"  />
+        <div style="height:15px;">
+            <ValidationMessage For="@(() => gameToAdd.GameName)" style="font-size:17px; height:10px;" />
+        </div>
+        </div>
+        <div style="position:relative; bottom:30px;">
+            <p style="font-size:24px;">זמן לשאלה</p>
+            <InputRadioGroup @bind-Value="gameToAdd.questionTime" class="radio-group">
+                <div style="display:inline-block">
+                    <InputRadio Value="20" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "20" } })" />
+                </div>
+                <div style="display:inline-block">
+                    <InputRadio Value="30" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "30" } })" />
+                </div>
+                <div style="display:inline-block">
+                    <InputRadio Value="60" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "60" } })" />
+                </div>
+                <div style="display:inline-block">
+                    <InputRadio Value="90" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "90" } })" />
+                </div>
+                <div style="display:inline-block;">
+                    <InputRadio Value="@int.MaxValue" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "ללא הגבלת זמן" } })" id="lastButton" />
+                </div>
+            </InputRadioGroup>
+            <ValidationMessage For="@(() => gameToAdd.questionTime)" style="height:10px; height:5px;" />
+        </div>
+        <div style="display: flex; justify-content: flex-end; width:60em; position: relative; left: 12em;">
+            <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="HideModal" Width="140px" />
+            @if (string.IsNullOrEmpty(gameToAdd.GameName))
+            {
+                <ButtonComponent ButtonText="יצירת משחק" ButtonColor="#EEC383" TextColor="black" Disabled="true" Width="140px" />
+            }
+            else
+            {
+                <ButtonComponent ButtonText="יצירת משחק" ButtonColor="orange" TextColor="black" OnClick="CreateGame" Width="140px" />
+            }
+        </div>
+    </EditForm>
+</PopUpComponent>
+
+
+<PopUpComponent IsVisible="showModal2" OnClose="HideModal2">
+    <div style="bottom:30px;">
+        <p class="newGameHeader">הגדרות משחק</p>
+
+        <EditForm Model="gameToEdit" OnValidSubmit="HideModal2" id="EditGameForm">
+            <DataAnnotationsValidator />
+            <p style="font-size:24px;">שם המשחק</p>
+           @* <InputText class="textInForm" style="position: relative; bottom: 15px;" @bind-Value="gameToEdit.GameName" maxlength="30" />*@
+            <CustomInputText class="textInForm" @bind-Value="gameToEdit.GameName" maxLength="30"
+                             midLength="15" minLength="2" placeholder=" שם המשחק" />
+            <div>
+                <ValidationMessage For="@(() => gameToEdit.GameName)" style="font-size:17px; height:5px;" />
+            </div>
+            <div>
+                <p style="font-size:24px;">זמן לשאלה</p>
+                <InputRadioGroup @bind-Value="gameToEdit.questionTime" class="radio-group">
+                    <div style="display:inline-block">
+                        <InputRadio Value="20" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "20" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="30" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "30" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="60" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "60" } })" />
+                    </div>
+                    <div style="display:inline-block">
+                        <InputRadio Value="90" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "90" } })" />
+                    </div>
+                    <div style="display:inline-block;">
+                        <InputRadio Value="@int.MaxValue" class="circle-radio" @attributes="@(new Dictionary<string, object> { { "data-value", "ללא הגבלת זמן" } })" id="lastButton" />
+                    </div>
+                </InputRadioGroup>
+                <ValidationMessage For="@(() => gameToEdit.questionTime)" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; width:60em; position: relative; top:50px; left: 12em;">
+                <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="HideModal" Width="140px" />
+                @if (MyGamesList != null)
+                {
+                    var originalGame = MyGamesList.FirstOrDefault(g => g.ID == gameToEdit.ID);
+                    if (originalGame != null)
+                    {
+                        if (gameToEdit.GameName == originalGame.GameName && gameToEdit.questionTime == originalGame.questionTime)
+
+                        {
+                            <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="#EEC383" TextColor="black" Disabled="true" Width="140px" />
+                        }
+                        else
+                        {
+                            <ButtonComponent ButtonText="שמירת שינויים" ButtonColor="orange" TextColor="black" OnClick="EditGame" Width="140px" />
+                        }
+                    }
+                }
+            </div>
+        </EditForm>
+    </div>
+</PopUpComponent>
+
+<PopUpComponent IsVisible="showModalDelete" OnClose="() => ToggleDeleteModal(theGame)">
+    <p class="newGameHeader">מחיקת משחק</p>
+    <p style="color: white; font-size: 18px; position:relative;text-align:center; right:180px;">לחיצה על כפתור מחיקה תמחק את המשחק <b>"@gameToEdit.GameName" </b>לצמיתות.</p>
+    <p style="color: white; font-size: 18px; text-align:center; position:relative; right:180px; height:10px;">האם ברצונך למחוק את המשחק?</p>
+    <div style="display:flex; justify-self:flex-end; position:relative; top:130px; right:450px;">
+        <ButtonComponent ButtonText="ביטול" ButtonColor="white" TextColor="black" OnClick="() => ToggleDeleteModal(theGame)"  Width="140px"/>
+        <ButtonComponent ButtonText="מחיקת משחק" ButtonColor="orange" TextColor="black" OnClick="DeleteGame" Width="140px" />
+    </div>
+</PopUpComponent>
+
+
+
+@code {
+    [CascadingParameter]
+    public int UserId { get; set; }
+    private int gameIdToDelete;
+
+    bool showModal = false;
+    bool showModal2 = false;
+    bool showModalDelete = false;
+
+
+    GamesTable theGame = new GamesTable();
+    List<GamesTable> MyGamesList;
+    NewGameDTO gameToAdd = new NewGameDTO
+        {
+            questionTime = 30
+        };
+
+    EditGameDTO gameToEdit = new EditGameDTO
+        {
+            questionTime = 30
+        };
+    CanPublishDTO canPublishDTO = new CanPublishDTO();
+    string msg = "";
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var gamesRes = await Http.GetAsync("api/games/");
+        if (gamesRes.IsSuccessStatusCode == true)
+        {
+
+            MyGamesList = await gamesRes.Content.ReadFromJsonAsync<List<GamesTable>>();
+            gameToAdd.GameName = "";
+
+            StateHasChanged();
+
+        }
+        else
+        {
+            string error = await gamesRes.Content.ReadAsStringAsync();
+            switch (error)
+            {
+                case "No games for this user":
+                    msg = "עדין לא יצרת משחקים... זה הזמן ליצור את הראשון :)";
+                    break;
+                case "user is not authenticated":
+                    msg = "ארעה בעיה בעת אימות המשתמש";
+                    break;
+            }
+        }
+    }
+
+
+    protected async Task changePublish(GamesTable game)
+    {
+        // בעת לחיצה על פרסום ניצור מופע של מחלקה עם מזהה המשחק ומצב הפרסום
+        PublishGame gameToSend = new PublishGame();
+        gameToSend.ID = game.ID;
+        // נגדיר שמצב הפרסום הפוך למצב הנוכחי. כלומר, אם לא היה מפורסם - כעת יהיה ולהיפך
+        gameToSend.isPublished = !game.isPublished;
+        // נשלח את המידע לקונטרולר
+        var userRes = await Http.PostAsJsonAsync("api/games/publishGame", gameToSend);
+        // אם הכל תקין - נציג את מצב הפרסום העדכני
+        if (userRes.IsSuccessStatusCode == true)
+        {
+            game.isPublished = !game.isPublished;
+        }
+        else
+        {
+            string error = userRes.Content.ReadAsStringAsync().Result;
+            // אם נמצא בקונטרולר שמסיבה כלשהי טעינו ובעצם לא ניתן לפרסם את המשחק
+            if (error == "This game cannot be published")
+            {
+                // נשנה את מצב הפרסום ולא נאפשר לפרסם
+                game.isPublished = false;
+                game.CanPublish = false;
+                // נסביר למשתמש מה קרה
+                msg = "המשחק אינו מאושר לפרסום";
+            }
+            else
+            {
+                // אחרת נקרא לפונקציית הודעות השגיאה אליה נוסיף את האופציות החדשות
+                ShowError(error);
+            }
+        }
+    }
+
+
+    private void EditQuestions(int gameId)
+    {
+        Nav.NavigateTo($"/QuestionsToEdit/{gameId}");
+    }
+
+    private async Task DeleteGame()
+    {
+        var response = await Http.DeleteAsync($"api/games/delete/{gameIdToDelete}");
+        if (response.IsSuccessStatusCode)
+        {
+            var gameToRemove = MyGamesList.FirstOrDefault(g => g.ID == gameIdToDelete);
+            if (gameToRemove != null)
+            {
+                MyGamesList.Remove(gameToRemove);
+            }
+
+            // Check if MyGamesList is empty after removing the game
+            if (MyGamesList.Count == 0)
+            {
+                MyGamesList = null;
+            }
+
+            StateHasChanged(); // Ensure the UI updates correctly
+        }
+        else
+        {
+            msg = "Failed to delete the game.";
+        }
+
+        ShowHideModalDelete();
+    }
+
+    private void OpenSettings(int gameId)
+    {
+        var game = MyGamesList.FirstOrDefault(g => g.ID == gameId);
+        if (game != null)
+        {
+            Console.WriteLine($"ID: {gameToEdit.ID}, GameName: {gameToEdit.GameName}, questionTime: {gameToEdit.questionTime}");
+            gameToEdit = new EditGameDTO
+                {
+                    ID = game.ID,
+                    GameName = game.GameName,
+                    questionTime = game.questionTime
+                };
+            Console.WriteLine($"ID: {gameToEdit.ID}, GameName: {gameToEdit.GameName}, questionTime: {gameToEdit.questionTime}");
+            ShowModal2();
+        }
+    }
+
+    private async Task EditGame()
+    {
+        var response = await Http.PutAsJsonAsync($"api/games/settings/{gameToEdit.ID}", gameToEdit);
+        if (response.IsSuccessStatusCode)
+        {
+            var updatedGame = MyGamesList.FirstOrDefault(g => g.ID == gameToEdit.ID);
+            if (updatedGame != null)
+            {
+                updatedGame.GameName = gameToEdit.GameName;
+                updatedGame.questionTime = gameToEdit.questionTime;
+            }
+            HideModal2();
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            ShowError(error);
+        }
+    }
+
+    async Task CreateGame()
+    {
+        var newGameRes = await Http.PostAsJsonAsync("api/games/addGame/", gameToAdd);
+        if (newGameRes.IsSuccessStatusCode)
+        {
+            msg = "";
+            GamesTable newGame = await newGameRes.Content.ReadFromJsonAsync<GamesTable>();
+
+            // Ensure MyGamesList is initialized before adding a new game
+            if (MyGamesList == null)
+            {
+                MyGamesList = new List<GamesTable>();
+            }
+
+            MyGamesList.Add(newGame);
+            gameToAdd.GameName = "";
+            await OnInitializedAsync();
+        }
+        else
+        {
+            string error = await newGameRes.Content.ReadAsStringAsync();
+            ShowError(error);
+        }
+    }
+
+
+    void ShowError(string error)
+    {
+        switch (error)
+        {
+            case "No games for this user":
+                msg = "עדין לא יצרת משחקים... זה הזמן ליצור את הראשון :)";
+                break;
+            case "user is not authenticated":
+                msg = "ארעה בעיה בעת אימות המשתמש";
+                break;
+            case "Game not created":
+                msg = "ארעה בעיה בעת יצירת המשחק";
+                break;
+            case "Game code not created":
+                msg = "ארעה בעיה בעת יצירת קוד המשחק";
+                break;
+            case "It's Not Your Game":
+                msg = "המשחק הזה אינו שלך...";
+                break;
+            case "This game cannot be published":
+                msg = "המשחק אינו מאושר לפרסום";
+                break;
+            case "Update Failed":
+                msg = "בעיה בעדכון המשחק";
+                break;
+
+        }
+    }
+
+    private void ShowModal()
+    {
+        showModal = true;
+    }
+
+    private void HideModal()
+    {
+        showModal = false;
+        gameToAdd.GameName = "";
+        gameToAdd.questionTime = 30;
+
+    }
+
+    private void ShowModal2()
+    {
+        showModal2 = true;
+    }
+
+    private void HideModal2()
+    {
+        showModal2 = false;
+    }
+
+    private void ShowHideModalDelete(int? gameId = null)
+    {
+        if (gameId.HasValue)
+        {
+            gameIdToDelete = gameId.Value;
+
+        }
+        showModalDelete = !showModalDelete;
+    }
+
+    private void ToggleDeleteModal(GamesTable game)
+    {
+        gameIdToDelete = game.ID;
+        gameToEdit.GameName = game.GameName;
+        showModalDelete = !showModalDelete;
+    }
+
+}

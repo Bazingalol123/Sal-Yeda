@@ -1,0 +1,20 @@
+﻿/*.default-input {
+    border-radius: 12px;
+    height: 30px;
+    font-size: 16px;
+    width: 40%;
+    padding: 0px 10px 0px 0px;
+    font-family: 'Varela Round';
+}*/
+
+    .default-input.good-input:focus {
+        outline: 5px solid green !important;
+    }
+
+    .default-input.warnning-input:focus {
+        outline: 5px solid orange !important;
+    }
+
+    .default-input.danger-input:focus {
+        outline: 5px solid red !important;
+    }

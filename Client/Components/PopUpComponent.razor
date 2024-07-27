@@ -1,0 +1,24 @@
+﻿<div class="modal" style="display:@(IsVisible ? "center" : "none");z-index:20; font-family:'Varela Round' ">
+    <img src="/images/basketball-player-shade.png" style="z-index:21; position: relative; right:130px; top:10px;"/>
+    <div class="modal-content">
+        <span class="close" @onclick="ClosePopup">&times;</span>
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    private void ClosePopup()
+    {
+        IsVisible = false;
+        OnClose.InvokeAsync(IsVisible);
+    }
+}

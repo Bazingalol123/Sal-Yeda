@@ -1,0 +1,58 @@
+﻿<style>
+    .tooltip-wrapper {
+        position: relative;
+        height: 22px;
+        width: 22px;
+        cursor: help;
+        z-index: 2;
+        /* Adjust positioning */
+        right: var(--tooltip-right, 0px);
+        bottom: var(--tooltip-bottom, 0px);
+        
+    }
+
+    .tooltip-text {
+        visibility: hidden;
+        position: absolute;
+        width: var(--tooltip-width, 180px);
+        bottom: 150%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #36697C;
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        border-radius: 15px;
+        z-index: 9999; /* Ensure it is above other elements */
+    }
+
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px;
+            border-style: solid;
+            border-color: #36697C transparent transparent transparent;
+        }
+
+    .tooltip-wrapper:hover .tooltip-text {
+        visibility: visible;
+    }
+</style>
+
+<div class="tooltip-wrapper" style="--tooltip-right: @right; --tooltip-bottom: @bottom;">
+    <span class="tooltip-text" style="--tooltip-width: @width;">@Text</span>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Text { get; set; }
+    [Parameter] public string right { get; set; } = "0px";
+    [Parameter] public string bottom { get; set; } = "0px";
+    [Parameter] public string top { get; set; } = "0px";
+    [Parameter] public string left { get; set; } = "0px";
+    [Parameter] public string width { get; set; } = "180px"; // Default to 120px
+}
